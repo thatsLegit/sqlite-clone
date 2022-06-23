@@ -40,5 +40,5 @@ clean:
 	${RM} -r ${BINDIR}/* ${OBJDIR}/*;
 	${RM} -r **/*.dSYM;
 
-run: clean
-run: ./${EXECUTABLE}
+run: 
+	./${EXECUTABLE}

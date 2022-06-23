@@ -16,10 +16,10 @@ typedef struct
 
 typedef struct
 {
-  uint32_t id;                         /* 32b = 4B */
-  char username[COLUMN_USERNAME_SIZE]; /* 32 * 1B */
-  char email[COLUMN_EMAIL_SIZE];       /* 255 * 1B */
-} Row;                                 /* 32 + 4 + 255 = 291B */
+  uint32_t id;                             /* 32b = 4B */
+  char username[COLUMN_USERNAME_SIZE + 1]; /* 32 * 1B + null terminator (1B) */
+  char email[COLUMN_EMAIL_SIZE + 1];       /* 255 * 1B + null terminator (1B) */
+} Row;                                     /* 32(+1) + 4 + 255(+1) = 293B */
 
 extern const uint32_t ID_SIZE;
 extern const uint32_t USERNAME_SIZE;
