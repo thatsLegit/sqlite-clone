@@ -15,6 +15,7 @@ OBJS=$(patsubst ${SRCDIR}/%.c, ${OBJDIR}/%.o, ${SRCS})
 
 BINDIR=bin
 EXECUTABLE=${BINDIR}/db
+DB_FILE=${BINDIR}/dbfile
 
 ####################################
 
@@ -41,4 +42,4 @@ clean:
 	${RM} -r **/*.dSYM;
 
 run: 
-	./${EXECUTABLE}
+	./${EXECUTABLE} ./${DB_FILE}

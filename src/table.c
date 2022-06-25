@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
@@ -37,13 +38,43 @@ void deserialize_row(void *source, Row *destination)
     memcpy(&(destination->email), source + EMAIL_OFFSET, EMAIL_SIZE);
 }
 
-// finds the memory slot allocated to a particular row
-void *row_slot(Table *table, uint32_t row_num)
+Cursor *table_start(Table *table)
+{
+    Cursor *cursor = malloc(sizeof(Cursor));
+    cursor->table = table;
+    cursor->row_num = 0;
+    cursor->end_of_table = (table->num_rows == 0);
+
+    return cursor;
+}
+
+Cursor *table_end(Table *table)
+{
+    Cursor *cursor = malloc(sizeof(Cursor));
+    cursor->table = table;
+    cursor->row_num = table->num_rows;
+    cursor->end_of_table = true;
+
+    return cursor;
+}
+
+void cursor_advance(Cursor *cursor)
+{
+    cursor->row_num += 1;
+    if (cursor->row_num >= cursor->table->num_rows)
+    {
+        cursor->end_of_table = true;
+    }
+}
+
+// returns a pointer to the position described by the cursor
+void *cursor_value(Cursor *cursor)
 {
     // find the page holding the required row
+    uint32_t row_num = cursor->row_num;
     uint32_t page_num = row_num / ROWS_PER_PAGE;
 
-    void *page = get_page(table->pager, page_num);
+    void *page = get_page(cursor->table->pager, page_num);
     if (page == NULL)
         return NULL;
     uint32_t row_offset = row_num % ROWS_PER_PAGE;
@@ -52,7 +83,7 @@ void *row_slot(Table *table, uint32_t row_num)
     return page + byte_offset;
 }
 
-// attempts to get the page from pager (cache).
+// Attempts to get the page from pager (cache).
 // if miss, allocates memory for this page and returns it.
 // writing to the disk file does not happen here yet.
 void *get_page(Pager *pager, uint32_t page_num)
@@ -97,7 +128,7 @@ void *get_page(Pager *pager, uint32_t page_num)
     return pager->pages[page_num];
 }
 
-/* opening the database file
+/* Opening the database file
 initializing a pager data structure
 initializing a table data structure */
 Table *db_open(const char *filename)
@@ -115,7 +146,6 @@ Table *db_open(const char *filename)
 // Opens the database file and keeps track of its size. It also initializes the page cache to all NULLs.
 Pager *pager_open(const char *filename)
 {
-    // disk persistence: that thing returns an integer ??
     int fd = open(filename,
                   O_RDWR |     // Read/Write mode
                       O_CREAT, // Create file if it does not exist

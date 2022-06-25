@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include "user_input.h"
 #include "codegen.h"
@@ -76,14 +77,17 @@ MetaCommandResult execute_meta_command(InputBuffer *input_buffer, Table *table)
 ExecuteResult execute_select(Statement *statement, Table *table)
 {
     Row row;
-    for (uint32_t i = 0; i < table->num_rows; i++)
+    Cursor *cursor = table_start(table);
+    while (!(cursor->end_of_table))
     {
-        void *slot = row_slot(table, i);
+        void *slot = cursor_value(cursor);
         if (slot == NULL)
             return EXECUTE_FAILURE;
         deserialize_row(slot, &row);
+        cursor_advance(cursor);
         print_row(&row);
     }
+    free(cursor);
     return EXECUTE_SUCCESS;
 }
 
@@ -95,13 +99,15 @@ ExecuteResult execute_insert(Statement *statement, Table *table)
     }
 
     Row *row_to_insert = &(statement->row_to_insert);
+    Cursor *cursor = table_end(table);
 
-    void *slot = row_slot(table, table->num_rows);
+    void *slot = cursor_value(cursor);
     if (slot == NULL)
         return EXECUTE_FAILURE;
     serialize_row(row_to_insert, slot);
     table->num_rows += 1;
 
+    free(cursor);
     return EXECUTE_SUCCESS;
 }
 
