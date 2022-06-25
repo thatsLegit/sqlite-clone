@@ -3,7 +3,7 @@
 # opens the binary, executes the commands and returns the stdout
 def run_script(commands)
   raw_output = nil
-  IO.popen('../bin/db', 'r+') do |pipe|
+  IO.popen(['../bin/db', '../bin/dbfile'], 'r+') do |pipe|
     commands.each do |command|
       pipe.puts command
     end
@@ -17,6 +17,13 @@ def run_script(commands)
 end
 
 describe('database') do
+  before :each do
+    File.delete('../bin/dbfile') if File.exist?('../bin/dbfile')
+  end
+  after :all do
+    File.delete('../bin/dbfile') if File.exist?('../bin/dbfile')
+  end
+
   it('inserts and retrieves a row') do
     result = run_script([
                           'insert 1 user1 person1@example.com',
@@ -85,5 +92,25 @@ describe('database') do
                                     'db > Executed.',
                                     'db > '
                                   ]))
+  end
+
+  it 'keeps data after closing connection' do
+    result1 = run_script([
+                           'insert 1 user1 person1@example.com',
+                           '.exit'
+                         ])
+    expect(result1).to match_array([
+                                     'db > Executed.',
+                                     'db > '
+                                   ])
+    result2 = run_script([
+                           'select',
+                           '.exit'
+                         ])
+    expect(result2).to match_array([
+                                     'db > (1, user1, person1@example.com)',
+                                     'Executed.',
+                                     'db > '
+                                   ])
   end
 end

@@ -10,15 +10,22 @@
 
 typedef struct
 {
-  uint32_t num_rows;
+  int file_descriptor;
+  uint32_t file_length;
   void *pages[TABLE_MAX_PAGES];
+} Pager;
+
+typedef struct
+{
+  uint32_t num_rows;
+  Pager *pager;
 } Table;
 
 typedef struct
 {
   uint32_t id;                             /* 32b = 4B */
-  char username[COLUMN_USERNAME_SIZE + 1]; /* 32 * 1B + null terminator (1B) */
-  char email[COLUMN_EMAIL_SIZE + 1];       /* 255 * 1B + null terminator (1B) */
+  char username[COLUMN_USERNAME_SIZE + 1]; /* 32 * 1B + null terminator (1B) = 32B */
+  char email[COLUMN_EMAIL_SIZE + 1];       /* 255 * 1B + null terminator (1B) = 255B */
 } Row;                                     /* 32(+1) + 4 + 255(+1) = 293B */
 
 extern const uint32_t ID_SIZE;
@@ -34,11 +41,16 @@ extern const uint32_t PAGE_SIZE;
 extern const uint32_t ROWS_PER_PAGE;
 extern const uint32_t TABLE_MAX_ROWS;
 
-Table *new_table();
-void free_table(Table *table);
+Table *db_open(const char *filename);
+Pager *pager_open(const char *filename);
+
+void *row_slot(Table *table, uint32_t row_num);
+void *get_page(Pager *pager, uint32_t page_num);
 
 void serialize_row(Row *source, void *destination);
 void deserialize_row(void *source, Row *destination);
-void *row_slot(Table *table, uint32_t row_num);
+
+void db_close(Table *table);
+void pager_flush(Pager *pager, uint32_t page_num, uint32_t size);
 
 #endif

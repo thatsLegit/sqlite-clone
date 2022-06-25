@@ -67,7 +67,7 @@ MetaCommandResult execute_meta_command(InputBuffer *input_buffer, Table *table)
     if (strcmp(input_buffer->buffer, ".exit") == 0)
     {
         close_input_buffer(input_buffer);
-        free_table(table);
+        db_close(table);
         exit(EXIT_SUCCESS);
     }
     return META_COMMAND_UNRECOGNIZED_COMMAND;
@@ -78,7 +78,10 @@ ExecuteResult execute_select(Statement *statement, Table *table)
     Row row;
     for (uint32_t i = 0; i < table->num_rows; i++)
     {
-        deserialize_row(row_slot(table, i), &row);
+        void *slot = row_slot(table, i);
+        if (slot == NULL)
+            return EXECUTE_FAILURE;
+        deserialize_row(slot, &row);
         print_row(&row);
     }
     return EXECUTE_SUCCESS;
@@ -93,7 +96,10 @@ ExecuteResult execute_insert(Statement *statement, Table *table)
 
     Row *row_to_insert = &(statement->row_to_insert);
 
-    serialize_row(row_to_insert, row_slot(table, table->num_rows));
+    void *slot = row_slot(table, table->num_rows);
+    if (slot == NULL)
+        return EXECUTE_FAILURE;
+    serialize_row(row_to_insert, slot);
     table->num_rows += 1;
 
     return EXECUTE_SUCCESS;
