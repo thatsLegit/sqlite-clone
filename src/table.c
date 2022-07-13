@@ -103,13 +103,6 @@ void *get_page(Pager *pager, uint32_t page_num)
 
         uint32_t file_num_pages = pager->file_length / PAGE_SIZE;
 
-        // We might save a partial page at the end of the file, i.e. 75% of the page
-        // so we still want to load the page with those rows by satisfying (age_num <= file_num_pages)
-        if (pager->file_length % PAGE_SIZE != 0)
-        {
-            file_num_pages += 1;
-        }
-
         // We have the data for the given page in the file, so we load the cache page with it
         if (page_num <= file_num_pages)
         {
@@ -192,8 +185,6 @@ void db_close(Table *table)
             continue; /* not overriding file pages */
         }
         pager_flush(pager, num_page, PAGE_SIZE);
-        free(pager->pages[num_page]);
-        pager->pages[num_page] = NULL;
     }
 
     // There may be a partial page to write to the end of the file
@@ -204,8 +195,6 @@ void db_close(Table *table)
         if (pager->pages[pager_num_full_pages] != NULL) /* if it's NULL, it means that we never tried getting that page */
         {
             pager_flush(pager, pager_num_full_pages, num_additional_rows * ROW_SIZE);
-            free(pager->pages[pager_num_full_pages]);
-            pager->pages[pager_num_full_pages] = NULL;
         }
     }
 

@@ -5,20 +5,22 @@
 #include "codegen.h"
 #include "table.h"
 
-/* STRTOK permet d 'extraire, un à un, tous les éléments syntaxiques (les tokens) d' une chaîne de caractères.
+/* STRTOK permet d'extraire, un à un, tous les éléments syntaxiques (les tokens) d' une chaîne de caractères.
     Pour contrôler ce qui doit être extrait, vous devez spécifier l'ensemble des caractères pouvant faire office de séparateurs de tokens.
 
     Pour extraire tous les tokens,
-    vous devez invoquer autant de fois que nécessaire la fonction strtok.Lors du premier appel vous devez passer la chaîne à découper ainsi que la liste des séparateurs.En retour, vous récupérerez le premier token.Ensuite, vous ne devrez plus repasser la chaîne à découper.A la place, il faudra fournir un pointeur nul(NULL)
-et vous récupérerez le token suivant.
+    vous devez invoquer autant de fois que nécessaire la fonction strtok.
+    Lors du premier appel vous devez passer la chaîne à découper ainsi que la liste des séparateurs.
+    En retour, vous récupérerez le premier token. Ensuite, vous ne devrez plus repasser la chaîne à découper.
+    A la place, il faudra fournir un pointeur nul (NULL) et vous récupérerez le token suivant.
 
-    l 'utilisation de cette fonction peut s' avérer être dangereuse !Si vous l'utilisez, il faut savoir que : La chaîne de caractères à découper,
+    L'utilisation de cette fonction peut s'avérer être dangereuse! Si vous l'utilisez, il faut savoir que la chaîne de caractères à découper,
     ne doit pas être constante car elle est modifiée à chaque appel à la fonction strtok.
 
     Comme nous venons de le dire,
     à la fin de l 'extraction, vous ne pouvez plus exploiter le contenu du premier paramètre car la chaîne d' origine a été altérée.
 
-    La fonction strtok n 'est pas « thread-safe ». Cela veut dire qu' elle ne doit pas être utilisée en parallèle par plusieurs threads,
+    La fonction strtok n'est pas « thread-safe ». Cela veut dire qu'elle ne doit pas être utilisée en parallèle par plusieurs threads,
     car elle utilise un unique pointeur vers la chaîne à découper pour les rappels suivants(une variable locale statique). */
 
 // Copies the input tokens into the statement, preventing buffer overflow

@@ -9,13 +9,15 @@
 #define COLUMN_EMAIL_SIZE 255
 #define size_of_attribute(Struct, Attribute) sizeof(((Struct *)0)->Attribute)
 
+// Structure used by a table to access the file of the table (file descriptor).
+// Or to load the data from memory (pager)
 typedef struct
 {
   int file_descriptor;
   uint32_t file_length;
   void *pages[TABLE_MAX_PAGES];
 } Pager;
-
+// num_rows always indicates the total number of rows that comprises the table
 typedef struct
 {
   uint32_t num_rows;
