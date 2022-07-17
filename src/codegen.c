@@ -95,7 +95,9 @@ ExecuteResult execute_select(Statement *statement, Table *table)
 
 ExecuteResult execute_insert(Statement *statement, Table *table)
 {
-    if (table->num_rows >= TABLE_MAX_ROWS)
+    // because we fill only 1 node so far
+    void *node = get_page(table->pager, table->root_page_num);
+    if ((*leaf_node_num_cells(node)) >= LEAF_NODE_MAX_CELLS)
     {
         return EXECUTE_TABLE_FULL;
     }
@@ -103,11 +105,7 @@ ExecuteResult execute_insert(Statement *statement, Table *table)
     Row *row_to_insert = &(statement->row_to_insert);
     Cursor *cursor = table_end(table);
 
-    void *slot = cursor_value(cursor);
-    if (slot == NULL)
-        return EXECUTE_FAILURE;
-    serialize_row(row_to_insert, slot);
-    table->num_rows += 1;
+    leaf_node_insert(cursor, row_to_insert->id, row_to_insert);
 
     free(cursor);
     return EXECUTE_SUCCESS;
