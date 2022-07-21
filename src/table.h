@@ -84,7 +84,7 @@ extern const uint32_t LEAF_NODE_KEY_OFFSET;
 extern const uint32_t LEAF_NODE_VALUE_SIZE;
 extern const uint32_t LEAF_NODE_VALUE_OFFSET;
 extern const uint32_t LEAF_NODE_CELL_SIZE;
-extern const uint32_t LEAF_NODE_SPACE_FORT_CELLS;
+extern const uint32_t LEAF_NODE_SPACE_FOR_CELLS;
 extern const uint32_t LEAF_NODE_MAX_CELLS;
 
 /*
@@ -99,6 +99,9 @@ extern const uint32_t LEAF_NODE_MAX_CELLS;
   • Modify the row pointed to by a cursor
   • Search a table for a given ID, and create a cursor pointing to the row with that ID
 */
+
+void print_constants();
+void print_leaf_node(void *node);
 
 Cursor *table_start(Table *table);
 Cursor *table_end(Table *table);

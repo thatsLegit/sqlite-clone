@@ -50,8 +50,8 @@ const uint32_t LEAF_NODE_KEY_OFFSET = 0;
 const uint32_t LEAF_NODE_VALUE_SIZE = ROW_SIZE;
 const uint32_t LEAF_NODE_VALUE_OFFSET = LEAF_NODE_KEY_SIZE + LEAF_NODE_KEY_OFFSET;
 const uint32_t LEAF_NODE_CELL_SIZE = LEAF_NODE_KEY_SIZE + LEAF_NODE_VALUE_SIZE;
-const uint32_t LEAF_NODE_SPACE_FORT_CELLS = PAGE_SIZE - LEAF_NODE_HEADER_SIZE;
-const uint32_t LEAF_NODE_MAX_CELLS = LEAF_NODE_SPACE_FORT_CELLS / LEAF_NODE_CELL_SIZE; /* ~13 with some wasted space in the end of the page/node */
+const uint32_t LEAF_NODE_SPACE_FOR_CELLS = PAGE_SIZE - LEAF_NODE_HEADER_SIZE;
+const uint32_t LEAF_NODE_MAX_CELLS = LEAF_NODE_SPACE_FOR_CELLS / LEAF_NODE_CELL_SIZE; /* ~13 with some wasted space in the end of the page/node */
 
 // Pointer to the number of cells in the node
 uint32_t *leaf_node_num_cells(void *node)
@@ -92,6 +92,27 @@ void deserialize_row(void *source, Row *destination)
     memcpy(&(destination->id), source + ID_OFFSET, ID_SIZE);
     memcpy(&(destination->username), source + USERNAME_OFFSET, USERNAME_SIZE);
     memcpy(&(destination->email), source + EMAIL_OFFSET, EMAIL_SIZE);
+}
+
+void print_constants()
+{
+    printf("ROW_SIZE: %d\n", ROW_SIZE);
+    printf("COMMON_NODE_HEADER_SIZE: %d\n", COMMON_NODE_HEADER_SIZE);
+    printf("LEAF_NODE_HEADER_SIZE: %d\n", LEAF_NODE_HEADER_SIZE);
+    printf("LEAF_NODE_CELL_SIZE: %d\n", LEAF_NODE_CELL_SIZE);
+    printf("LEAF_NODE_SPACE_FOR_CELLS: %d\n", LEAF_NODE_SPACE_FOR_CELLS);
+    printf("LEAF_NODE_MAX_CELLS: %d\n", LEAF_NODE_MAX_CELLS);
+}
+
+void print_leaf_node(void *node)
+{
+    uint32_t num_cells = *leaf_node_num_cells(node);
+    printf("leaf (size %d)\n", num_cells);
+    for (uint32_t i = 0; i < num_cells; i++)
+    {
+        uint32_t key = *leaf_node_key(node, i);
+        printf("  - %d : %d\n", i, key);
+    }
 }
 
 Cursor *table_start(Table *table)
@@ -289,13 +310,13 @@ void db_close(Table *table)
 {
     Pager *pager = table->pager;
 
-    for (uint32_t num_page = 0; num_page < pager->num_pages; num_page++)
+    for (uint32_t i = 0; i < pager->num_pages; i++)
     {
-        if (pager->pages[num_page] == NULL)
+        if (pager->pages[i] == NULL)
         {
             continue; /* not overriding file pages */
         }
-        pager_flush(pager, num_page);
+        pager_flush(pager, i);
     }
 
     if ((close(pager->file_descriptor)) == -1)
