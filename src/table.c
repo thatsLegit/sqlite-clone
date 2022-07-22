@@ -74,7 +74,11 @@ void *leaf_node_value(void *node, uint32_t cell_num)
     return leaf_node_cell(node, cell_num) + LEAF_NODE_KEY_SIZE;
 }
 // anihilates the value the node pointer is pointing to
-void initialize_leaf_node(void *node) { *leaf_node_num_cells(node) = 0; }
+void initialize_leaf_node(void *node)
+{
+    set_node_type(node, NODE_LEAF);
+    *leaf_node_num_cells(node) = 0;
+}
 
 // Magics of C, placing into a destination memory space, related values next
 // to each other, without even caring about their types.
@@ -111,8 +115,21 @@ void print_leaf_node(void *node)
     for (uint32_t i = 0; i < num_cells; i++)
     {
         uint32_t key = *leaf_node_key(node, i);
-        printf("  - %d : %d\n", i, key);
+        printf("index %d: key %d\n", i, key);
     }
+}
+
+NodeType get_node_type(void *node)
+{
+    // We have to cast to uint8_t first to ensure it’s serialized as a single byte.
+    uint8_t value = *((uint8_t *)(node + NODE_TYPE_OFFSET));
+    return (NodeType)value;
+}
+void set_node_type(void *node, NodeType type)
+{
+    u_int8_t value = (uint8_t)type;
+    uint8_t *type_slot_ptr = (uint8_t *)(node + NODE_TYPE_OFFSET);
+    *type_slot_ptr = value;
 }
 
 Cursor *table_start(Table *table)
@@ -126,19 +143,6 @@ Cursor *table_start(Table *table)
     // aren't we making the assumption that root_node is a leaf node ?
     uint32_t num_cells = *leaf_node_num_cells(root_node);
     cursor->end_of_table = (num_cells == 0);
-
-    return cursor;
-}
-
-Cursor *table_end(Table *table)
-{
-    Cursor *cursor = malloc(sizeof(Cursor));
-    cursor->table = table;
-    void *root_node = get_page(table->pager, table->root_page_num);
-    // aren't we making the assumption that root_node is a leaf node ?
-    uint32_t num_cells = *leaf_node_num_cells(root_node);
-    cursor->cell_num = num_cells;
-    cursor->end_of_table = true;
 
     return cursor;
 }
@@ -164,6 +168,63 @@ void *cursor_value(Cursor *cursor)
     return leaf_node_value(page, cursor->cell_num);
 }
 
+// Return the position of the given key.
+// If the key is not present, return the position where it should be inserted
+Cursor *table_find(Table *table, u_int32_t key_to_insert)
+{
+    void *root_node = get_page(table->pager, table->root_page_num);
+
+    if (get_node_type(root_node) == NODE_LEAF)
+    {
+        return leaf_node_find(table, table->root_page_num, key_to_insert);
+    }
+    else
+    {
+        printf("Need to implement searching an internal node\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*
+    This will either return:
+    • the position of the key
+    • the position of another key that we’ll need to move if we want to insert the new key
+    • the position one past the last key if it's in the end
+*/
+Cursor *leaf_node_find(Table *table, u_int32_t page_num, u_int32_t key_to_insert)
+{
+    void *node = get_page(table->pager, page_num);
+    uint32_t node_num_cells = *leaf_node_num_cells(node);
+    Cursor *cursor = malloc(sizeof(Cursor));
+    cursor->table = table;
+    cursor->page_num = page_num;
+
+    int start_i = 0, end_i = node_num_cells, middle_i;
+
+    while (end_i > start_i)
+    {
+        middle_i = (start_i + end_i) / 2;
+        uint32_t cell_key = *leaf_node_key(node, middle_i);
+        cursor->cell_num = middle_i;
+
+        if (cell_key == key_to_insert)
+        {
+            cursor->cell_num = middle_i;
+            return cursor;
+        }
+        else if (cell_key > key_to_insert)
+            end_i = middle_i;
+        else
+            start_i = middle_i + 1;
+    }
+
+    cursor->end_of_table = (node_num_cells == 0);
+    cursor->cell_num = start_i;
+    return cursor;
+}
+
+// creates a cell(key, value(serialized row)) and inserts it at the correct position
+// if the position is in the middle of existing nodes, shift them to the right
 void leaf_node_insert(Cursor *cursor, uint32_t key, Row *value)
 {
     void *node = get_page(cursor->table->pager, cursor->page_num);
@@ -187,8 +248,7 @@ void leaf_node_insert(Cursor *cursor, uint32_t key, Row *value)
     }
     // ex: node_num_cells = 10, cell_num = 7
     // so position in cells ranging from [[0, 9] * LEAF_NODE_CELL_SIZE]
-    // In order to insert a cell at position 7, we run the loop from 10 to 8
-    // effectively placing cells 10<-9, 9<-8, 8<-7
+    // In order to insert a cell at position 7, we shift 10<-9, 9<-8, 8<-7
     // if cursor->cell_num = node_num_cells <=> 8 == 8, the 8 cell slot is empty because [0, 7] are occupied
 
     *(leaf_node_num_cells(node)) += 1;

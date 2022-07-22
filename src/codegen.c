@@ -105,18 +105,32 @@ ExecuteResult execute_select(Statement *statement, Table *table)
     return EXECUTE_SUCCESS;
 }
 
+// Right now, our execute_insert() function always chooses to insert at the end of the table.
+// Instead, we should search the table for the correct place to insert, then insert there.
+// If the key already exists there, return an error.
 ExecuteResult execute_insert(Statement *statement, Table *table)
 {
     // because we fill only 1 node so far
-    void *node = get_page(table->pager, table->root_page_num);
-    if ((*leaf_node_num_cells(node)) >= LEAF_NODE_MAX_CELLS)
-    {
+    void *root_node = get_page(table->pager, table->root_page_num);
+    uint32_t node_num_cells = *leaf_node_num_cells(root_node);
+
+    if (node_num_cells >= LEAF_NODE_MAX_CELLS)
         return EXECUTE_TABLE_FULL;
-    }
 
     Row *row_to_insert = &(statement->row_to_insert);
-    Cursor *cursor = table_end(table);
+    u_int32_t key_to_insert = row_to_insert->id;
+    Cursor *cursor = table_find(table, key_to_insert); /* finds the correct page_num/num_cell */
 
+    // checks if the key to insert is the same as one of the already existing keys
+    if (cursor->cell_num < node_num_cells)
+    {
+        // root_node because we have only one node so far
+        uint32_t key_at_index = *leaf_node_key(root_node, cursor->cell_num);
+        if (key_at_index == key_to_insert)
+            return EXECUTE_DUPLICATE_KEY;
+    }
+
+    // finally insert the cell
     leaf_node_insert(cursor, row_to_insert->id, row_to_insert);
 
     free(cursor);
