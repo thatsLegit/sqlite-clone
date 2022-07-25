@@ -52,6 +52,9 @@ const uint32_t LEAF_NODE_VALUE_OFFSET = LEAF_NODE_KEY_SIZE + LEAF_NODE_KEY_OFFSE
 const uint32_t LEAF_NODE_CELL_SIZE = LEAF_NODE_KEY_SIZE + LEAF_NODE_VALUE_SIZE;
 const uint32_t LEAF_NODE_SPACE_FOR_CELLS = PAGE_SIZE - LEAF_NODE_HEADER_SIZE;
 const uint32_t LEAF_NODE_MAX_CELLS = LEAF_NODE_SPACE_FOR_CELLS / LEAF_NODE_CELL_SIZE; /* ~13 with some wasted space in the end of the page/node */
+// splitting the leaf node
+const uint32_t LEAF_NODE_RIGHT_SPLIT_COUNT = (LEAF_NODE_MAX_CELLS + 1) / 2;
+const uint32_t LEAF_NODE_LEFT_SPLIT_COUNT = (LEAF_NODE_MAX_CELLS + 1) - LEAF_NODE_RIGHT_SPLIT_COUNT;
 
 // Pointer to the number of cells in the node
 uint32_t *leaf_node_num_cells(void *node)
@@ -232,9 +235,8 @@ void leaf_node_insert(Cursor *cursor, uint32_t key, Row *value)
     uint32_t node_num_cells = *leaf_node_num_cells(node);
     if (node_num_cells >= LEAF_NODE_MAX_CELLS)
     {
-        // Node full
-        printf("Need to implement splitting a leaf node.\n");
-        exit(EXIT_FAILURE);
+        leaf_node_split_and_insert(cursor, key, value);
+        return;
     }
 
     if (cursor->cell_num < node_num_cells)
@@ -255,6 +257,67 @@ void leaf_node_insert(Cursor *cursor, uint32_t key, Row *value)
     *(leaf_node_key(node, cursor->cell_num)) = key;
     serialize_row(value, leaf_node_value(node, cursor->cell_num));
 }
+
+void leaf_node_split_and_insert(Cursor *cursor, uint32_t key, Row *value)
+{
+    /*
+        Create a new node and move half the cells over.
+        Insert the new value in one of the two nodes.
+        Update parent or create a new parent.
+    */
+    void *old_node = get_page(cursor->table->pager, cursor->page_num);
+    uint32_t new_page_num = get_unused_page_num(cursor->table->pager);
+    void *new_node = get_page(cursor->table->pager, new_page_num);
+    initialize_leaf_node(new_node);
+    /*
+        Next, copy every cell into its new location:
+        All existing keys plus new key should be divided
+        evenly between old (left) and new (right) nodes.
+        Starting from the right, move each key to correct position.
+    */
+    for (int32_t i = LEAF_NODE_MAX_CELLS; i >= 0; i--)
+    {
+        void *destination_node;
+
+        if (i >= LEAF_NODE_LEFT_SPLIT_COUNT)
+            destination_node = new_node;
+        else
+            destination_node = old_node;
+
+        uint32_t index_within_node = i % LEAF_NODE_LEFT_SPLIT_COUNT;
+        void *destination_cell = leaf_node_cell(destination_node, index_within_node);
+
+        if (i == cursor->cell_num)
+            serialize_row(value, destination_cell);
+        else if (i > cursor->cell_num)
+            memcpy(destination_cell, leaf_node_cell(old_node, i - 1), LEAF_NODE_CELL_SIZE);
+        else
+            memcpy(destination_cell, leaf_node_cell(old_node, i), LEAF_NODE_CELL_SIZE);
+    }
+
+    /* Update cell count on both leaf nodes */
+    *(leaf_node_num_cells(old_node)) = LEAF_NODE_LEFT_SPLIT_COUNT;
+    *(leaf_node_num_cells(new_node)) = LEAF_NODE_RIGHT_SPLIT_COUNT;
+
+    /*
+        Then we need to update the node's parent.
+        If the original node was the root, it had no parent.
+        In that case, create a new root node to act as the parent.
+    */
+    if (is_node_root(old_node))
+        return create_new_root(cursor->table, new_page_num);
+    else
+    {
+        printf("Need to implement updating parent after split\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
+/*
+    Until we start recycling free pages, new pages will always
+    go onto the end of the database file.
+*/
+uint32_t get_unused_page_num(Pager *pager) { return pager->num_pages; }
 
 // Attempts to get the page from pager (cache).
 // if miss, allocates memory for this page and returns it.

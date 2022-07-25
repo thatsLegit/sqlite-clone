@@ -86,6 +86,8 @@ extern const uint32_t LEAF_NODE_VALUE_OFFSET;
 extern const uint32_t LEAF_NODE_CELL_SIZE;
 extern const uint32_t LEAF_NODE_SPACE_FOR_CELLS;
 extern const uint32_t LEAF_NODE_MAX_CELLS;
+extern const uint32_t LEAF_NODE_RIGHT_SPLIT_COUNT;
+extern const uint32_t LEAF_NODE_LEFT_SPLIT_COUNT;
 
 /*
   Abstraction. Represents a location in the table. Things you might want to do with cursors :
@@ -114,12 +116,14 @@ uint32_t *leaf_node_key(void *node, uint32_t cell_num);
 void *leaf_node_value(void *node, uint32_t cell_num);
 void initialize_leaf_node(void *node);
 void leaf_node_insert(Cursor *cursor, uint32_t key, Row *value);
+void leaf_node_split_and_insert(Cursor *cursor, uint32_t key, Row *value);
 NodeType get_node_type(void *node);
 void set_node_type(void *node, NodeType type);
-Cursor* leaf_node_find(Table* table, u_int32_t page_num, u_int32_t key_to_insert);
+Cursor *leaf_node_find(Table *table, u_int32_t page_num, u_int32_t key_to_insert);
 
 Pager *pager_open(const char *filename);
 void *get_page(Pager *pager, uint32_t page_num);
+uint32_t get_unused_page_num(Pager *pager);
 
 Table *db_open(const char *filename);
 void db_close(Table *table);

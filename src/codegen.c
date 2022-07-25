@@ -114,9 +114,6 @@ ExecuteResult execute_insert(Statement *statement, Table *table)
     void *root_node = get_page(table->pager, table->root_page_num);
     uint32_t node_num_cells = *leaf_node_num_cells(root_node);
 
-    if (node_num_cells >= LEAF_NODE_MAX_CELLS)
-        return EXECUTE_TABLE_FULL;
-
     Row *row_to_insert = &(statement->row_to_insert);
     u_int32_t key_to_insert = row_to_insert->id;
     Cursor *cursor = table_find(table, key_to_insert); /* finds the correct page_num/num_cell */
