@@ -62,11 +62,9 @@ int main(int argc, char *argv[])
         case (EXECUTE_SUCCESS):
             printf("Executed.\n");
             break;
+            // case EXECUTE_TABLE_FULL removed since part on splitting leaf node
         case (EXECUTE_FAILURE):
             printf("Query error.\n");
-            break;
-        case (EXECUTE_TABLE_FULL):
-            printf("Error: Table full.\n");
             break;
         case (EXECUTE_DUPLICATE_KEY):
             printf("Error: Duplicate key.\n");

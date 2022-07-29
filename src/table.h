@@ -73,6 +73,20 @@ extern const uint32_t PARENT_POINTER_SIZE;
 extern const uint32_t PARENT_POINTER_OFFSET;
 extern const uint32_t COMMON_NODE_HEADER_SIZE;
 
+// Internal Node Header Layout
+extern const uint32_t INTERNAL_NODE_NUM_KEYS_SIZE;
+extern const uint32_t INTERNAL_NODE_NUM_KEYS_OFFSET;
+// page number of its rightmost child
+extern const uint32_t INTERNAL_NODE_RIGHTMOST_CHILD_SIZE;
+extern const uint32_t INTERNAL_NODE_RIGHTMOST_CHILD_OFFSET;
+extern const uint32_t INTERNAL_NODE_HEADER_SIZE;
+
+// Internal Node Body Layout
+extern const uint32_t INTERNAL_NODE_KEY_SIZE;
+// the child is identifed by the page number
+extern const uint32_t INTERNAL_NODE_CHILD_SIZE;
+extern const uint32_t INTERNAL_NODE_CELL_SIZE;
+
 // Leaf Node Header Layout
 extern const uint32_t LEAF_NODE_NUM_CELLS_SIZE;
 extern const uint32_t LEAF_NODE_NUM_CELLS_OFFSET;
@@ -102,33 +116,57 @@ extern const uint32_t LEAF_NODE_LEFT_SPLIT_COUNT;
   • Search a table for a given ID, and create a cursor pointing to the row with that ID
 */
 
+// utils
 void print_constants();
-void print_leaf_node(void *node);
+void indent(uint32_t level);
+void print_tree(Pager *pager, uint32_t page_num, uint32_t indentation_level);
 
+// table functions
 Cursor *table_start(Table *table);
 void *cursor_value(Cursor *cursor);
 void cursor_advance(Cursor *cursor);
 Cursor *table_find(Table *table, u_int32_t key_to_insert);
 
+// leaf node utils
 uint32_t *leaf_node_num_cells(void *node);
 void *leaf_node_cell(void *node, uint32_t cell_num);
 uint32_t *leaf_node_key(void *node, uint32_t cell_num);
 void *leaf_node_value(void *node, uint32_t cell_num);
 void initialize_leaf_node(void *node);
-void leaf_node_insert(Cursor *cursor, uint32_t key, Row *value);
-void leaf_node_split_and_insert(Cursor *cursor, uint32_t key, Row *value);
+
+// internal node utils
+uint32_t *internal_node_num_keys(void *node);
+uint32_t *internal_node_rightmost_child(void *node);
+uint32_t *internal_node_cell(void *node, uint32_t cell_num);
+uint32_t *internal_node_key(void *node, uint32_t key_num);
+uint32_t *internal_node_child(void *node, uint32_t key_num);
+
+// node common utils
 NodeType get_node_type(void *node);
 void set_node_type(void *node, NodeType type);
+bool is_node_root(void *node);
+void set_node_root(void *node, bool is_root);
+uint32_t get_node_max_key(void *node);
+
+// leaf node functions
+void leaf_node_insert(Cursor *cursor, uint32_t key, Row *value);
+void leaf_node_split_and_insert(Cursor *cursor, uint32_t key, Row *value);
 Cursor *leaf_node_find(Table *table, u_int32_t page_num, u_int32_t key_to_insert);
 
+// functions on nodes
+void create_new_root(Table *table, uint32_t right_child_page_num);
+
+// pager functions
 Pager *pager_open(const char *filename);
 void *get_page(Pager *pager, uint32_t page_num);
 uint32_t get_unused_page_num(Pager *pager);
 
+// common db functions
 Table *db_open(const char *filename);
 void db_close(Table *table);
 void pager_flush(Pager *pager, uint32_t page_num);
 
+// row functions
 void serialize_row(Row *source, void *destination);
 void deserialize_row(void *source, Row *destination);
 
