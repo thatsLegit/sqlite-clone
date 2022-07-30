@@ -252,6 +252,7 @@ void print_tree(Pager *pager, uint32_t page_num, uint32_t indentation_level)
             indent(indentation_level + 1);
             printf("- key %d\n", *internal_node_key(node, i));
         }
+        // because we don't have any key for the last child so code above doesn't reach it
         child = *internal_node_rightmost_child(node);
         print_tree(pager, child, indentation_level + 1);
         break;
