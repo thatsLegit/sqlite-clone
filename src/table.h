@@ -54,7 +54,7 @@ typedef struct
   Table *table;
   uint32_t page_num;
   uint32_t cell_num;
-  bool end_of_table; // Indicates a position one past the last element
+  bool end_of_table;
 } Cursor;
 
 // Nodes
@@ -152,6 +152,9 @@ uint32_t get_node_max_key(void *node);
 void leaf_node_insert(Cursor *cursor, uint32_t key, Row *value);
 void leaf_node_split_and_insert(Cursor *cursor, uint32_t key, Row *value);
 Cursor *leaf_node_find(Table *table, u_int32_t page_num, u_int32_t key_to_insert);
+
+// internal node functions
+Cursor *internal_node_find(Table *table, u_int32_t page_num, u_int32_t key_to_insert);
 
 // functions on nodes
 void create_new_root(Table *table, uint32_t right_child_page_num);

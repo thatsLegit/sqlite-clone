@@ -289,9 +289,7 @@ void *cursor_value(Cursor *cursor)
 {
     void *page = get_page(cursor->table->pager, cursor->page_num);
     if (page == NULL)
-    {
         return NULL;
-    }
     return leaf_node_value(page, cursor->cell_num);
 }
 
@@ -300,16 +298,37 @@ void *cursor_value(Cursor *cursor)
 Cursor *table_find(Table *table, u_int32_t key_to_insert)
 {
     void *root_node = get_page(table->pager, table->root_page_num);
+    uint32_t root_page_num = table->root_page_num;
 
     if (get_node_type(root_node) == NODE_LEAF)
-    {
-        return leaf_node_find(table, table->root_page_num, key_to_insert);
-    }
+        return leaf_node_find(table, root_page_num, key_to_insert);
     else
+        return internal_node_find(table, root_page_num, key_to_insert);
+}
+
+Cursor *internal_node_find(Table *table, u_int32_t page_num, u_int32_t key_to_insert)
+{
+    void *node = get_page(table->pager, page_num);
+    uint32_t node_num_keys = *internal_node_num_keys(node);
+    int start_i = 0, end_i = node_num_keys - 1, middle_i;
+
+    while (end_i >= start_i)
     {
-        printf("Need to implement searching an internal node\n");
-        exit(EXIT_FAILURE);
+        middle_i = (start_i + end_i) / 2;
+        uint32_t middle = *internal_node_key(node, middle_i);
+        if (middle >= key_to_insert)
+            end_i = middle_i - 1;
+        else
+            start_i = middle_i + 1;
     }
+
+    uint32_t child_num = *internal_node_child(node, start_i);
+    void *child = get_page(table->pager, child_num);
+
+    if (get_node_type(child) == NODE_LEAF)
+        return leaf_node_find(table, child_num, key_to_insert);
+    else
+        return internal_node_find(table, child_num, key_to_insert);
 }
 
 /*
@@ -325,14 +344,14 @@ Cursor *leaf_node_find(Table *table, u_int32_t page_num, u_int32_t key_to_insert
     Cursor *cursor = malloc(sizeof(Cursor));
     cursor->table = table;
     cursor->page_num = page_num;
+    cursor->end_of_table = (node_num_cells == 0);
 
-    int start_i = 0, end_i = node_num_cells, middle_i;
+    int start_i = 0, end_i = node_num_cells - 1, middle_i;
 
-    while (end_i > start_i)
+    while (end_i >= start_i)
     {
         middle_i = (start_i + end_i) / 2;
         uint32_t cell_key = *leaf_node_key(node, middle_i);
-        cursor->cell_num = middle_i;
 
         if (cell_key == key_to_insert)
         {
@@ -340,12 +359,11 @@ Cursor *leaf_node_find(Table *table, u_int32_t page_num, u_int32_t key_to_insert
             return cursor;
         }
         else if (cell_key > key_to_insert)
-            end_i = middle_i;
+            end_i = middle_i - 1;
         else
             start_i = middle_i + 1;
     }
 
-    cursor->end_of_table = (node_num_cells == 0);
     cursor->cell_num = start_i;
     return cursor;
 }
